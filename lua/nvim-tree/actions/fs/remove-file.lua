@@ -123,7 +123,7 @@ function M.remove(node)
     events._dispatch_file_removed(node.absolute_path)
     clear_buffer(node.absolute_path)
   end
-  notify.info(notify_node .. " was properly removed.")
+  -- notify.info(notify_node .. " was properly removed.")
 end
 
 ---@param node Node
