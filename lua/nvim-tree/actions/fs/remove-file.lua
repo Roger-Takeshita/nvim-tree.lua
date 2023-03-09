@@ -138,7 +138,7 @@ local function remove_one(node)
 
   local function do_remove()
     if M.remove(node) then
-      notify.info(notify.render_path(node.absolute_path) .. " was properly removed.")
+      -- notify.info(notify.render_path(node.absolute_path) .. " was properly removed.")
     end
     local explorer = core.get_explorer()
     if not config.g.filesystem_watchers.enable and explorer then
