@@ -72,7 +72,7 @@ function M.fn(node)
     local idx = 0
 
     local num_nodes = get_num_nodes(utils.path_split(utils.path_remove_trailing(new_file_path)))
-    local is_error = false
+    -- local is_error = false
     for path in utils.path_split(new_file_path) do
       idx = idx + 1
       local p = utils.path_remove_trailing(path)
@@ -87,15 +87,15 @@ function M.fn(node)
         local success = vim.loop.fs_mkdir(path_to_create, 493)
         if not success then
           notify.error("Could not create folder " .. notify.render_path(path_to_create))
-          is_error = true
+          -- is_error = true
           break
         end
         events._dispatch_folder_created(new_file_path)
       end
     end
-    if not is_error then
-      notify.info(notify.render_path(new_file_path) .. " was properly created")
-    end
+    -- if not is_error then
+    --   notify.info(notify.render_path(new_file_path) .. " was properly created")
+    -- end
 
     -- synchronously refreshes as we can't wait for the watchers
     find_file(utils.path_remove_trailing(new_file_path))
