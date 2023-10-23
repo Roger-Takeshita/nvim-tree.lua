@@ -124,7 +124,6 @@ function M.remove(node)
     clear_buffer(node.absolute_path)
   end
   -- notify.info(notify_node .. " was properly removed.")
-  require("nvim-tree.renderer").draw()
 end
 
 ---@param node Node
