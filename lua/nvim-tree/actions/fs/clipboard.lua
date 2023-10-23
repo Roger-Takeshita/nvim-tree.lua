@@ -177,22 +177,23 @@ local function toggle(node, clip)
   if node.name == ".." then
     return
   end
-  local notify_node = notify.render_path(node.absolute_path)
+  -- local notify_node = notify.render_path(node.absolute_path)
 
   if utils.array_remove(clip, node) then
-    notify.info(notify_node .. " removed from clipboard.")
+    -- notify.info(notify_node .. " removed from clipboard.")
     return
   end
 
   table.insert(clip, node)
-  notify.info(notify_node .. " added to clipboard.")
+  -- notify.info(notify_node .. " added to clipboard.")
+  return
 end
 
 ---Clear copied and cut
 function Clipboard:clear_clipboard()
   self.data.copy = {}
   self.data.cut = {}
-  notify.info("Clipboard has been emptied.")
+  -- notify.info("Clipboard has been emptied.")
   self.explorer.renderer:draw()
 end
 
