@@ -137,22 +137,22 @@ local function toggle(node, clip, action)
   if node.name == ".." then
     return
   end
-  local notify_node = notify.render_path(node.absolute_path)
+  -- local notify_node = notify.render_path(node.absolute_path)
 
   if utils.array_remove(clip, node) then
-    notify.info(notify_node .. " removed from clipboard.")
+    -- notify.info(notify_node .. " removed from clipboard.")
     return
   end
 
   table.insert(clip, node)
-  notify.info(string.format("%s %s to clipboard.", notify_node, action_adjective[action]))
+  -- notify.info(string.format("%s %s to clipboard.", notify_node, action_adjective[action]))
 end
 
 ---Clear copied and cut
 function Clipboard:clear_clipboard()
   self.data.copy = {}
   self.data.cut = {}
-  notify.info("Clipboard has been emptied.")
+  -- notify.info("Clipboard has been emptied.")
   self.explorer.renderer:draw()
 end
 
@@ -261,8 +261,11 @@ function Clipboard:resolve_conflicts(conflict, destination, action, action_fn)
       rename_prompt(dest)
     else
       local prompt_select = "Overwrite " .. dest .. " ?"
-      lib.prompt(prompt_select .. " R(ename)/y/n: ", prompt_select,
-        { "", "y", "n" }, { "Rename", "Yes", "No" },
+      lib.prompt(
+        prompt_select .. " R(ename)/y/n: ",
+        prompt_select,
+        { "", "y", "n" },
+        { "Rename", "Yes", "No" },
         "nvimtree_overwrite_rename",
         function(item_short)
           utils.clear_prompt()
@@ -274,7 +277,8 @@ function Clipboard:resolve_conflicts(conflict, destination, action, action_fn)
           else
             self:finish_paste(action)
           end
-        end)
+        end
+      )
     end
     return
   end
@@ -282,7 +286,9 @@ function Clipboard:resolve_conflicts(conflict, destination, action, action_fn)
   local prompt_select = #conflict .. " file(s) already exist"
   local prompt_input = prompt_select .. ". R(ename suffix)/y/n: "
 
-  lib.prompt(prompt_input, prompt_select,
+  lib.prompt(
+    prompt_input,
+    prompt_select,
     { "", "y", "n" },
     { "Rename (suffix)", "Overwrite all", "Skip all" },
     "nvimtree_paste_conflict",
@@ -321,7 +327,8 @@ function Clipboard:resolve_conflicts(conflict, destination, action, action_fn)
       else
         self:finish_paste(action)
       end
-    end)
+    end
+  )
 end
 
 --- Transforms the copied absolute paths on register to node
@@ -552,7 +559,6 @@ function Clipboard:copy_absolute_path(node_or_nodes, opts)
       table.insert(content, self:get_absolute_path(node))
     end
   end
-
 
   if content ~= nil then
     local message = nil
