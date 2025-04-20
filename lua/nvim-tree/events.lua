@@ -60,6 +60,11 @@ function M._dispatch_will_create_file(fname)
 end
 
 --@private
+function M._dispatch_will_create_note(fname)
+  dispatch(M.Event.WillCreateNote, { fname = fname })
+end
+
+--@private
 function M._dispatch_file_created(fname)
   dispatch(Event.FileCreated, { fname = fname })
 end
