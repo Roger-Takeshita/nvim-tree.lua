@@ -10,6 +10,7 @@ nvim_tree.api.events.Event = {
   TreeOpen = "TreeOpen",
   TreeClose = "TreeClose",
   WillCreateFile = "WillCreateFile",
+  WillCreateNote = "WillCreateNote",
   FileCreated = "FileCreated",
   WillRemoveFile = "WillRemoveFile",
   FileRemoved = "FileRemoved",
