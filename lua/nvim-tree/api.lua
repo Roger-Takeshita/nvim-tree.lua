@@ -214,6 +214,7 @@ Api.tree.is_visible = wrap(view.is_visible)
 Api.tree.winid = wrap(view.winid)
 
 Api.fs.create = wrap_node_or_nil(actions.fs.create_file.fn)
+Api.fs.create_note = wrap_node_or_nil(actions.fs.create_note.fn)
 Api.fs.remove = wrap_node(actions.fs.remove_file.fn)
 Api.fs.trash = wrap_node(actions.fs.trash.fn)
 Api.fs.rename_node = wrap_node(actions.fs.rename_file.fn(":t"))
