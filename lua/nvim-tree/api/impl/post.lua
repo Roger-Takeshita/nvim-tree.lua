@@ -173,6 +173,7 @@ function M.hydrate(api)
   api.tree.winid = view.winid
 
   api.fs.create = wrap_node_or_nil(actions.fs.create_file.fn)
+  api.fs.create_note = wrap_node_or_nil(actions.fs.create_note.fn)
   api.fs.remove = wrap_node(actions.fs.remove_file.fn)
   api.fs.trash = wrap_node(actions.fs.trash.fn)
   api.fs.rename_node = wrap_node(actions.fs.rename_file.fn(":t"))

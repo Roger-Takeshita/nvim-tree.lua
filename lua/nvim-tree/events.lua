@@ -12,6 +12,7 @@ M.Event = {
   TreeOpen = "TreeOpen",
   TreeClose = "TreeClose",
   WillCreateFile = "WillCreateFile",
+  WillCreateNote = "WillCreateNote",
   FileCreated = "FileCreated",
   WillRemoveFile = "WillRemoveFile",
   FileRemoved = "FileRemoved",
@@ -75,6 +76,11 @@ end
 --@private
 function M._dispatch_will_create_file(fname)
   dispatch(M.Event.WillCreateFile, { fname = fname })
+end
+
+--@private
+function M._dispatch_will_create_note(fname)
+  dispatch(M.Event.WillCreateNote, { fname = fname })
 end
 
 --@private
