@@ -62,7 +62,7 @@ end
 
 --@private
 function M._dispatch_will_create_note(fname)
-  dispatch(M.Event.WillCreateNote, { fname = fname })
+  dispatch(Event.WillCreateNote, { fname = fname })
 end
 
 --@private
