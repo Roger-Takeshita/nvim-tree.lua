@@ -10,22 +10,40 @@ local DirectoryNode = require("nvim-tree.node.directory")
 
 local M = {}
 
----@param file string
-local function create_and_notify(file)
+---@param file_path string
+---@param note_name string
+local function create_and_notify(file_path, note_name)
+  local file = file_path .. "/" .. note_name .. ".md"
   events._dispatch_will_create_note(file)
+
   local ok, fd = pcall(vim.loop.fs_open, file, "w", 420)
   if not ok or type(fd) ~= "number" then
     notify.error("Couldn't create file " .. notify.render_path(file))
     return
   end
+
   vim.loop.fs_close(fd)
+
+  if note_name and note_name ~= "" then
+    local lines = {
+      "# " .. string.upper(note_name),
+      "",
+    }
+
+    local write_ok, err = pcall(vim.fn.writefile, lines, file)
+    if not write_ok then
+      notify.error("Couldn't write heading to file " .. notify.render_path(file) .. ": " .. tostring(err))
+      return
+    end
+  end
+
   events._dispatch_file_created(file)
 end
 
 ---@param path_to_create string
 ---@param name string
 local function create_folder_structure(path_to_create, name)
-  create_and_notify(path_to_create .. "/" .. name .. ".md")
+  create_and_notify(path_to_create, name)
   vim.loop.fs_mkdir(path_to_create .. "/files", 493)
 end
 
@@ -62,33 +80,31 @@ function M.fn(node)
       return
     end
 
-    -- create a folder for each path element if the folder does not exist
-    -- if the answer ends with a /, create a file for the last path element
     local path_to_create = ""
     local idx = 0
 
-    -- local is_error = false
     for path in utils.path_split(new_file_path) do
       idx = idx + 1
       local p = utils.path_remove_trailing(path)
+
       if #path_to_create == 0 and vim.fn.has("win32") == 1 then
         path_to_create = utils.path_join({ p, path_to_create })
       else
         path_to_create = utils.path_join({ path_to_create, p })
       end
+
       if not utils.file_exists(path_to_create) then
         local success = vim.loop.fs_mkdir(path_to_create, 493)
         if not success then
           notify.error("Could not create folder " .. notify.render_path(path_to_create))
-          -- is_error = true
           break
         end
+
         create_folder_structure(path_to_create, p)
         events._dispatch_folder_created(new_file_path)
       end
     end
 
-    -- synchronously refreshes as we can't wait for the watchers
     find_file(utils.path_remove_trailing(new_file_path))
   end)
 end
