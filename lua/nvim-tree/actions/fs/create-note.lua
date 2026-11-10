@@ -38,6 +38,7 @@ local function create_and_notify(file_path, note_name)
   end
 
   events._dispatch_file_created(file)
+  vim.cmd.edit(vim.fn.fnameescape(file))
 end
 
 ---@param path_to_create string
