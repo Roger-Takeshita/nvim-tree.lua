@@ -127,7 +127,7 @@ local function do_paste_one(source, dest, action, action_fn)
   if not success then
     notify.error("Could not " .. action .. " " .. notify.render_path(source) .. " - " .. (err or "???"))
   end
-  find_file(utils.path_remove_trailing(dest))
+  return success
 end
 
 ---@param node Node
@@ -223,9 +223,15 @@ end
 ---Clear clipboard for action and reload to reflect filesystem changes from paste.
 ---@private
 ---@param action ClipboardAction
-function Clipboard:finish_paste(action)
+---@param focus_path? string
+function Clipboard:finish_paste(action, focus_path)
   self.data[action] = {}
   self.explorer:reload_explorer()
+  if focus_path then
+    vim.schedule(function()
+      find_file(utils.path_remove_trailing(focus_path))
+    end)
+  end
 end
 
 ---Resolve conflicting paste items.
@@ -236,7 +242,8 @@ end
 ---@param destination string
 ---@param action ClipboardAction
 ---@param action_fn ClipboardActionFn
-function Clipboard:resolve_conflicts(conflict, destination, action, action_fn)
+---@param focus_path? string
+function Clipboard:resolve_conflicts(conflict, destination, action, action_fn, focus_path)
   if #conflict == 1 then
     local source = conflict[1].node.absolute_path
     local dest = conflict[1].dest
@@ -245,14 +252,16 @@ function Clipboard:resolve_conflicts(conflict, destination, action, action_fn)
       vim.ui.input({ prompt = "Rename to ", default = default_dest, completion = "dir" }, function(new_dest)
         utils.clear_prompt()
         if not new_dest or new_dest == "" then
-          self:finish_paste(action)
+          self:finish_paste(action, focus_path)
           return
         end
         if vim.uv.fs_stat(new_dest) then
-          self:resolve_conflicts({ { node = conflict[1].node, dest = new_dest } }, destination, action, action_fn)
+          self:resolve_conflicts({ { node = conflict[1].node, dest = new_dest } }, destination, action, action_fn, focus_path)
         else
-          do_paste_one(source, new_dest, action, action_fn)
-          self:finish_paste(action)
+          if do_paste_one(source, new_dest, action, action_fn) then
+            focus_path = new_dest
+          end
+          self:finish_paste(action, focus_path)
         end
       end)
     end
@@ -270,12 +279,14 @@ function Clipboard:resolve_conflicts(conflict, destination, action, action_fn)
         function(item_short)
           utils.clear_prompt()
           if item_short == "y" then
-            do_paste_one(source, dest, action, action_fn)
-            self:finish_paste(action)
+            if do_paste_one(source, dest, action, action_fn) then
+              focus_path = dest
+            end
+            self:finish_paste(action, focus_path)
           elseif item_short == "" or item_short == "r" then
             rename_prompt(dest)
           else
-            self:finish_paste(action)
+            self:finish_paste(action, focus_path)
           end
         end
       )
@@ -296,13 +307,16 @@ function Clipboard:resolve_conflicts(conflict, destination, action, action_fn)
       utils.clear_prompt()
       if item_short == "y" then
         for _, item in ipairs(conflict) do
-          do_paste_one(item.node.absolute_path, item.dest, action, action_fn)
+          if do_paste_one(item.node.absolute_path, item.dest, action, action_fn) then
+            focus_path = item.dest
+          end
         end
-        self:finish_paste(action)
+        self:finish_paste(action, focus_path)
       elseif item_short == "" or item_short == "r" then
         vim.ui.input({ prompt = "Suffix: " }, function(suffix)
           utils.clear_prompt()
           if not suffix or suffix == "" then
+            self:finish_paste(action, focus_path)
             return
           end
           local still_conflict = {}
@@ -314,18 +328,18 @@ function Clipboard:resolve_conflicts(conflict, destination, action, action_fn)
             local stats = vim.uv.fs_stat(new_dest)
             if stats then
               table.insert(still_conflict, { node = item.node, dest = new_dest })
-            else
-              do_paste_one(item.node.absolute_path, new_dest, action, action_fn)
+            elseif do_paste_one(item.node.absolute_path, new_dest, action, action_fn) then
+              focus_path = new_dest
             end
           end
           if #still_conflict > 0 then
-            self:resolve_conflicts(still_conflict, destination, action, action_fn)
+            self:resolve_conflicts(still_conflict, destination, action, action_fn, focus_path)
           else
-            self:finish_paste(action)
+            self:finish_paste(action, focus_path)
           end
         end)
       else
-        self:finish_paste(action)
+        self:finish_paste(action, focus_path)
       end
     end
   )
@@ -363,6 +377,40 @@ function Clipboard:destroy_nodes(nodes)
   for _, n in ipairs(nodes) do
     n:destroy()
   end
+end
+
+---@param path string
+---@return string
+local function normalize_absolute_path(path)
+  local normalized = vim.fn.fnamemodify(path, ":p")
+  normalized = utils.path_remove_trailing(normalized)
+  if vim.fn.has("win32") == 1 then
+    normalized = normalized:lower()
+  end
+  return normalized
+end
+
+---@param path string
+---@param parent string
+---@return boolean
+local function is_descendant_path(path, parent)
+  local normalized_path = normalize_absolute_path(path)
+  local normalized_parent = normalize_absolute_path(parent)
+  if normalized_path == normalized_parent then
+    return false
+  end
+  local prefix = normalized_parent
+  if prefix:sub(-1) ~= utils.path_separator then
+    prefix = prefix .. utils.path_separator
+  end
+  return normalized_path:sub(1, #prefix) == prefix
+end
+
+---@param source string
+---@param destination string
+---@return boolean
+local function is_same_path(source, destination)
+  return normalize_absolute_path(source) == normalize_absolute_path(destination)
 end
 
 ---Paste cut or copy with batch conflict resolution.
@@ -405,25 +453,39 @@ function Clipboard:do_paste(node, action, action_fn)
   local no_conflict = {}
   local conflict = {}
   for _, _node in ipairs(clip) do
+    local source = _node.absolute_path
     local dest = utils.path_join({ destination, _node.name })
-    local dest_stats = vim.uv.fs_stat(dest)
-    if dest_stats then
-      table.insert(conflict, { node = _node, dest = dest })
+
+    if is_same_path(source, dest) then
+      -- Moving or copying an item onto itself is a no-op.
     else
-      table.insert(no_conflict, { node = _node, dest = dest })
+      local source_stats = vim.uv.fs_stat(source)
+      if source_stats and source_stats.type == "directory" and is_descendant_path(dest, source) then
+        notify.warn("Cannot " .. action .. " " .. notify.render_path(source) .. " into itself or a descendant directory.")
+      else
+        local dest_stats = vim.uv.fs_stat(dest)
+        if dest_stats then
+          table.insert(conflict, { node = _node, dest = dest })
+        else
+          table.insert(no_conflict, { node = _node, dest = dest })
+        end
+      end
     end
   end
 
   -- Paste non-conflicting items immediately
+  local focus_path
   for _, item in ipairs(no_conflict) do
-    do_paste_one(item.node.absolute_path, item.dest, action, action_fn)
+    if do_paste_one(item.node.absolute_path, item.dest, action, action_fn) then
+      focus_path = item.dest
+    end
   end
 
   -- Resolve conflicts in batch
   if #conflict > 0 then
-    self:resolve_conflicts(conflict, destination, action, action_fn)
+    self:resolve_conflicts(conflict, destination, action, action_fn, focus_path)
   else
-    self:finish_paste(action)
+    self:finish_paste(action, focus_path)
   end
 
   if is_local == false then

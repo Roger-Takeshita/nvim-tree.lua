@@ -482,16 +482,30 @@ end
 ---@param nodes Node[]
 ---@return Node[]
 function M.filter_descendant_nodes(nodes)
-  return vim.tbl_filter(function(node)
-    local parent = node.parent
-    while parent do
-      if vim.tbl_contains(nodes, parent) then
-        return false
+  local seen = {}
+  local filtered = {}
+
+  for _, node in ipairs(nodes) do
+    if node and node.absolute_path and not seen[node.absolute_path] then
+      seen[node.absolute_path] = true
+
+      local parent = node.parent
+      local descendant = false
+      while parent do
+        if seen[parent.absolute_path] or vim.tbl_contains(nodes, parent) then
+          descendant = true
+          break
+        end
+        parent = parent.parent
       end
-      parent = parent.parent
+
+      if not descendant then
+        table.insert(filtered, node)
+      end
     end
-    return true
-  end, nodes)
+  end
+
+  return filtered
 end
 
 ---Build confirmation prompt strings based on default_yes config.
@@ -525,8 +539,7 @@ end
 
 ---Exit visual mode synchronously.
 function M.exit_visual_mode()
-  local esc = vim.api.nvim_replace_termcodes("<Esc>", true, false, true)
-  vim.api.nvim_feedkeys(esc, "nx", false)
+  vim.api.nvim_input("<Esc>")
 end
 
 ---Get the visual selection range nodes, exiting visual mode.
