@@ -161,6 +161,18 @@ local function remove_one(node)
   end
 end
 
+local function render_selected_names(nodes)
+  local names = {}
+  for _, node in ipairs(nodes) do
+    local name = node.name
+    if node:is(DirectoryNode) then
+      name = name .. "/"
+    end
+    table.insert(names, "  • " .. name)
+  end
+  return table.concat(names, "\n")
+end
+
 ---Remove multiple nodes with a single confirmation prompt.
 ---@param nodes Node[]
 local function remove_many(nodes)
@@ -187,7 +199,7 @@ local function remove_many(nodes)
   end
 
   if config.g.ui.confirm.remove then
-    local prompt_select = string.format("Remove %d selected?", #nodes)
+    local prompt_select = string.format("Remove %d selected?\n%s", #nodes, render_selected_names(nodes))
     local prompt_input, items_short, items_long = utils.confirm_prompt(prompt_select, config.g.ui.confirm.default_yes)
 
     lib.prompt(prompt_input, prompt_select, items_short, items_long, "nvimtree_remove", function(item_short)
